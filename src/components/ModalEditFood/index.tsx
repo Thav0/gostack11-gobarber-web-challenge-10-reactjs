@@ -2,6 +2,7 @@ import React, { useRef, useCallback } from 'react';
 
 import { FiCheckSquare } from 'react-icons/fi';
 import { FormHandles } from '@unform/core';
+import * as Yup from 'yup';
 import { Form } from './styles';
 import Modal from '../Modal';
 import Input from '../Input';
@@ -29,6 +30,10 @@ interface IEditFoodData {
   description: string;
 }
 
+interface IErrors {
+  [key: string]: string;
+}
+
 const ModalEditFood: React.FC<IModalProps> = ({
   isOpen,
   setIsOpen,
@@ -39,9 +44,38 @@ const ModalEditFood: React.FC<IModalProps> = ({
 
   const handleSubmit = useCallback(
     async (data: IEditFoodData) => {
-      // EDIT A FOOD PLATE AND CLOSE THE MODAL
+      try {
+        formRef.current?.setErrors({});
+        const schema = Yup.object().shape({
+          image: Yup.string().required('Link da foto obrigatório'),
+          name: Yup.string().required('Nome obrigatório'),
+          price: Yup.number().required('Preço obrigatório'),
+          description: Yup.string().required('Descrição obrigatória'),
+        });
+
+        await schema.validate(data, {
+          abortEarly: false,
+        });
+
+        const { image, name, price, description } = data;
+
+        const formData = { image, name, price, description };
+
+        handleUpdateFood(formData);
+      } catch (error) {
+        if (error instanceof Yup.ValidationError) {
+          alert('Preencha todos os campos!');
+          const validationErrors: IErrors = {};
+
+          error.inner.forEach(err => {
+            validationErrors[err.path] = err.message;
+          });
+
+          formRef.current?.setErrors(validationErrors);
+        }
+      }
     },
-    [handleUpdateFood, setIsOpen],
+    [handleUpdateFood],
   );
 
   return (
